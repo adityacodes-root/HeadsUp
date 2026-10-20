@@ -12,13 +12,17 @@ class MotionController {
         this.isLocked = false;
         this.armed = true;
 
-        this.TILT_THRESHOLD = 2.2;
-        this.NEUTRAL_THRESHOLD = 1.1;
-        this.COOLDOWN_MS = 700;
+        this.TILT_THRESHOLD = 2.4;
+        this.NEUTRAL_THRESHOLD = 1.0;
+        this.COOLDOWN_MS = 950;
 
         this.baselineZ = 0;
         this.calibrationSamples = 0;
         this.calibrated = false;
+        this.neutralCount = 0;
+        this.requiredNeutralCount = 6;
+
+        this.lastTriggeredDirection = null;
 
         this.currentZ = 0;
         this.currentDelta = 0;
@@ -62,6 +66,8 @@ class MotionController {
         this.baselineZ = 0;
         this.calibrationSamples = 0;
         this.calibrated = false;
+        this.neutralCount = 0;
+        this.lastTriggeredDirection = null;
         this.hasSensorData = false;
         this.isPhoneHorizontal = true;
 
@@ -106,7 +112,6 @@ class MotionController {
             tilt = (orientation === 90) ? e.gamma : -e.gamma;
             this.isPhoneHorizontal = true;
         } else {
-            // When browser in portrait, rotating around horizontal phone axis is gamma
             tilt = e.gamma;
             this.isPhoneHorizontal = true;
         }
@@ -119,7 +124,6 @@ class MotionController {
     }
 
     processReading(z) {
-        // If phone is held vertically, disable tilt actions
         if (!this.isPhoneHorizontal) {
             if (this.onStateChange) {
                 this.onStateChange({
@@ -133,7 +137,6 @@ class MotionController {
             return;
         }
 
-        // Calibrate baseline to player's forehead resting angle
         if (!this.calibrated) {
             if (Math.abs(z) < 6.0) {
                 this.baselineZ = (this.baselineZ * this.calibrationSamples + z) / (this.calibrationSamples + 1);
@@ -142,7 +145,7 @@ class MotionController {
                     this.calibrated = true;
                 }
             }
-        } else if (!this.isLocked && this.armed && Math.abs(z - this.baselineZ) < 1.3) {
+        } else if (!this.isLocked && this.armed && Math.abs(z - this.baselineZ) < 1.2) {
             this.baselineZ = this.baselineZ * 0.95 + z * 0.05;
         }
 
@@ -159,11 +162,18 @@ class MotionController {
             });
         }
 
+        // Require multiple stable frames inside neutral zone before re-arming
         if (Math.abs(delta) <= this.NEUTRAL_THRESHOLD) {
-            if (!this.isLocked && !this.armed) {
-                this.armed = true;
-                this.state = 'NEUTRAL';
+            this.neutralCount++;
+            if (this.neutralCount >= this.requiredNeutralCount) {
+                if (!this.isLocked) {
+                    this.armed = true;
+                    this.state = 'NEUTRAL';
+                    this.lastTriggeredDirection = null;
+                }
             }
+        } else {
+            this.neutralCount = 0;
         }
 
         if (this.isLocked || !this.armed) return;
@@ -184,6 +194,8 @@ class MotionController {
     triggerAction(direction) {
         this.isLocked = true;
         this.armed = false;
+        this.neutralCount = 0;
+        this.lastTriggeredDirection = direction;
         this.state = direction === 'DOWN' ? 'TILTED_DOWN' : 'TILTED_UP';
 
         if (direction === 'DOWN' && typeof this.onTiltDown === 'function') {

@@ -224,12 +224,14 @@ class HeadsUpGame {
     }
 
     setupMotionCallbacks() {
+        // Bend phone down = Correct
         MotionEngine.onTiltDown = () => {
             if (this.gameState === 'PLAYING') {
                 this.recordAnswer(true);
             }
         };
 
+        // Bend phone up = Skip
         MotionEngine.onTiltUp = () => {
             if (this.gameState === 'PLAYING') {
                 this.recordAnswer(false);

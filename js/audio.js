@@ -41,7 +41,7 @@ class SoundEffects {
         } catch (e) {}
     }
 
-    playTone(freq, type = 'sine', duration = 0.15, gainVal = 0.2, startDelay = 0) {
+    playTone(freq, type = 'sine', duration = 0.15, gainVal = 0.4, startDelay = 0) {
         if (this.muted) return;
         try {
             this.init();
@@ -65,43 +65,32 @@ class SoundEffects {
     }
 
     playCorrect() {
-        this.vibrate([40]);
+        this.vibrate([60]);
         if (this.muted) return;
-        this.playTone(587.33, 'triangle', 0.18, 0.25, 0);
-        this.playTone(880.00, 'sine', 0.28, 0.3, 0.08);
+        // High bright game-show ding: G5 (784Hz) -> C6 (1046Hz)
+        this.playTone(783.99, 'triangle', 0.14, 0.5, 0);
+        this.playTone(1046.50, 'triangle', 0.28, 0.65, 0.09);
     }
 
     playSkip() {
-        this.vibrate([25, 30, 25]);
+        this.vibrate([40, 40, 40]);
         if (this.muted) return;
-        try {
-            this.init();
-            if (!this.ctx) return;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(360, this.ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(180, this.ctx.currentTime + 0.18);
-            gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.18);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start();
-            osc.stop(this.ctx.currentTime + 0.2);
-        } catch (e) {}
+        // Distinct descending double-buzz for pass: 360Hz -> 240Hz
+        this.playTone(360, 'sawtooth', 0.1, 0.35, 0);
+        this.playTone(240, 'sawtooth', 0.16, 0.45, 0.09);
     }
 
     playTick() {
         this.vibrate(15);
-        this.playTone(900, 'sine', 0.04, 0.12);
+        this.playTone(900, 'sine', 0.04, 0.2);
     }
 
     playBeep(isFinal = false) {
         this.vibrate(30);
         if (isFinal) {
-            this.playTone(880, 'triangle', 0.3, 0.3);
+            this.playTone(880, 'triangle', 0.3, 0.5);
         } else {
-            this.playTone(440, 'sine', 0.1, 0.2);
+            this.playTone(440, 'sine', 0.1, 0.3);
         }
     }
 
@@ -114,15 +103,7 @@ class SoundEffects {
             { f: 783.99, t: 0.24 },
             { f: 1046.50, t: 0.38 }
         ];
-        notes.forEach(n => this.playTone(n.f, 'triangle', 0.45, 0.3, n.t));
-    }
-
-    playTimeUp() {
-        this.vibrate([120, 80, 120]);
-        if (this.muted) return;
-        this.playTone(440, 'triangle', 0.25, 0.25, 0);
-        this.playTone(392, 'triangle', 0.35, 0.25, 0.18);
-        this.playTone(330, 'triangle', 0.5, 0.25, 0.38);
+        notes.forEach(n => this.playTone(n.f, 'triangle', 0.45, 0.5, n.t));
     }
 }
 
