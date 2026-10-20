@@ -12,14 +12,16 @@ class MotionController {
         this.isLocked = false;
         this.armed = true;
 
-        this.THRESHOLD_UP = 4.2;
-        this.THRESHOLD_DOWN = -4.2;
-        this.NEUTRAL_LIMIT = 2.2;
-        this.COOLDOWN_MS = 900;
+        this.TILT_THRESHOLD = 2.4;
+        this.NEUTRAL_THRESHOLD = 1.2;
+        this.COOLDOWN_MS = 750;
 
-        this.neutralSamples = 0;
-        this.requiredNeutralSamples = 4;
+        this.baselineZ = 0;
+        this.calibrationSamples = 0;
+        this.calibrated = false;
+
         this.currentZ = 0;
+        this.currentDelta = 0;
 
         this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -56,7 +58,9 @@ class MotionController {
         this.state = 'NEUTRAL';
         this.armed = true;
         this.isLocked = false;
-        this.neutralSamples = 0;
+        this.baselineZ = 0;
+        this.calibrationSamples = 0;
+        this.calibrated = false;
         this.hasSensorData = false;
 
         window.addEventListener('devicemotion', this.handleDeviceMotion, false);
@@ -85,8 +89,8 @@ class MotionController {
     handleDeviceOrientation(e) {
         if (!this.active || this.hasSensorData) return;
 
-        const orientation = window.orientation || (screen.orientation && screen.orientation.angle) || 0;
         let tilt = 0;
+        const orientation = window.orientation || (screen.orientation && screen.orientation.angle) || 0;
 
         if (Math.abs(orientation) === 90 || orientation === 270) {
             tilt = (orientation === 90) ? e.gamma : -e.gamma;
@@ -102,38 +106,49 @@ class MotionController {
     }
 
     processReading(z) {
+        if (!this.calibrated) {
+            if (Math.abs(z) < 6.0) {
+                this.baselineZ = (this.baselineZ * this.calibrationSamples + z) / (this.calibrationSamples + 1);
+                this.calibrationSamples++;
+                if (this.calibrationSamples >= 6) {
+                    this.calibrated = true;
+                }
+            }
+        } else if (!this.isLocked && this.armed && Math.abs(z - this.baselineZ) < 1.4) {
+            this.baselineZ = this.baselineZ * 0.96 + z * 0.04;
+        }
+
+        const delta = z - this.baselineZ;
+        this.currentDelta = delta;
+
         if (this.onStateChange) {
             this.onStateChange({
                 z,
+                delta,
                 state: this.state,
                 isLocked: this.isLocked,
                 armed: this.armed
             });
         }
 
-        const isNeutral = Math.abs(z) <= this.NEUTRAL_LIMIT;
-
-        if (isNeutral) {
-            this.neutralSamples++;
-            if (this.neutralSamples >= this.requiredNeutralSamples) {
-                if (!this.isLocked && !this.armed) {
-                    this.armed = true;
-                    this.state = 'NEUTRAL';
-                }
+        if (Math.abs(delta) <= this.NEUTRAL_THRESHOLD) {
+            if (!this.isLocked && !this.armed) {
+                this.armed = true;
+                this.state = 'NEUTRAL';
             }
-        } else {
-            this.neutralSamples = 0;
         }
 
         if (this.isLocked || !this.armed) return;
 
-        if (z >= this.THRESHOLD_UP) {
-            this.triggerAction('UP');
+        // Bend phone down towards floor (delta becomes negative) -> CORRECT
+        if (delta <= -this.TILT_THRESHOLD) {
+            this.triggerAction('DOWN');
             return;
         }
 
-        if (z <= this.THRESHOLD_DOWN) {
-            this.triggerAction('DOWN');
+        // Bend phone up towards ceiling (delta becomes positive) -> SKIP
+        if (delta >= this.TILT_THRESHOLD) {
+            this.triggerAction('UP');
             return;
         }
     }
@@ -141,13 +156,12 @@ class MotionController {
     triggerAction(direction) {
         this.isLocked = true;
         this.armed = false;
-        this.state = direction === 'UP' ? 'TILTED_UP' : 'TILTED_DOWN';
-        this.neutralSamples = 0;
+        this.state = direction === 'DOWN' ? 'TILTED_DOWN' : 'TILTED_UP';
 
-        if (direction === 'UP' && typeof this.onTiltUp === 'function') {
-            this.onTiltUp();
-        } else if (direction === 'DOWN' && typeof this.onTiltDown === 'function') {
+        if (direction === 'DOWN' && typeof this.onTiltDown === 'function') {
             this.onTiltDown();
+        } else if (direction === 'UP' && typeof this.onTiltUp === 'function') {
+            this.onTiltUp();
         }
 
         setTimeout(() => {

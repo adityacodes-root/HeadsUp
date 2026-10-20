@@ -103,24 +103,30 @@ class HeadsUpGame {
             this.dom.btnMute.innerText = AudioEngine.muted ? '🔇' : '🔊';
         }
 
+        const handleCorrect = (e) => {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            if (this.gameState === 'PLAYING') this.recordAnswer(true);
+        };
+        const handleSkip = (e) => {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            if (this.gameState === 'PLAYING') this.recordAnswer(false);
+        };
+        const handleExit = (e) => {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            this.abortGame();
+        };
+
         if (this.dom.btnCorrect) {
-            this.dom.btnCorrect.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (this.gameState === 'PLAYING') this.recordAnswer(true);
-            });
+            this.dom.btnCorrect.addEventListener('click', handleCorrect);
+            this.dom.btnCorrect.addEventListener('touchend', handleCorrect);
         }
         if (this.dom.btnSkip) {
-            this.dom.btnSkip.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (this.gameState === 'PLAYING') this.recordAnswer(false);
-            });
+            this.dom.btnSkip.addEventListener('click', handleSkip);
+            this.dom.btnSkip.addEventListener('touchend', handleSkip);
         }
-
         if (this.dom.btnExitGame) {
-            this.dom.btnExitGame.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.abortGame();
-            });
+            this.dom.btnExitGame.addEventListener('click', handleExit);
+            this.dom.btnExitGame.addEventListener('touchend', handleExit);
         }
 
         if (this.dom.btnStartChallenge) {
@@ -209,14 +215,12 @@ class HeadsUpGame {
     }
 
     setupMotionCallbacks() {
-        // Bend down is CORRECT
         MotionEngine.onTiltDown = () => {
             if (this.gameState === 'PLAYING') {
                 this.recordAnswer(true);
             }
         };
 
-        // Bend up is SKIP
         MotionEngine.onTiltUp = () => {
             if (this.gameState === 'PLAYING') {
                 this.recordAnswer(false);
@@ -226,9 +230,9 @@ class HeadsUpGame {
         MotionEngine.onStateChange = (status) => {
             if (this.dom.tiltIndicator && this.gameState === 'PLAYING') {
                 if (status.state === 'TILTED_DOWN') {
-                    this.dom.tiltIndicator.className = 'status-dot up'; // Green
+                    this.dom.tiltIndicator.className = 'status-dot up';
                 } else if (status.state === 'TILTED_UP') {
-                    this.dom.tiltIndicator.className = 'status-dot down'; // Red
+                    this.dom.tiltIndicator.className = 'status-dot down';
                 } else {
                     this.dom.tiltIndicator.className = 'status-dot neutral';
                 }
@@ -389,11 +393,11 @@ class HeadsUpGame {
         if (!el) return;
         const length = word.length;
         if (length <= 10) {
-            el.style.fontSize = 'clamp(2.5rem, 7vw, 5rem)';
+            el.style.fontSize = 'clamp(2.4rem, 6.5vw, 4.5rem)';
         } else if (length <= 16) {
-            el.style.fontSize = 'clamp(2rem, 5.5vw, 3.8rem)';
+            el.style.fontSize = 'clamp(1.9rem, 5vw, 3.5rem)';
         } else {
-            el.style.fontSize = 'clamp(1.6rem, 4.5vw, 3rem)';
+            el.style.fontSize = 'clamp(1.5rem, 4vw, 2.8rem)';
         }
     }
 
