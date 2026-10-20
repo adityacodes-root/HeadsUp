@@ -91,6 +91,7 @@
 
         <section id="screen-playing" class="screen">
             <div id="feedback-overlay" class="feedback-overlay"></div>
+            <div id="orientation-warning" class="orientation-warning">Hold phone horizontally across forehead</div>
 
             <header class="playing-hud">
                 <div class="hud-left">
@@ -178,6 +179,29 @@
                         <option value="10">10 Cards</option>
                         <option value="15" selected>15 Cards (Standard)</option>
                         <option value="20">20 Cards</option>
+                    </select>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <span class="setting-title">Tilt Sensitivity</span>
+                        <span class="setting-desc">Nod depth to register tilt</span>
+                    </div>
+                    <select id="setting-sensitivity" class="setting-select">
+                        <option value="sensitive">Sensitive (Light nod)</option>
+                        <option value="normal" selected>Normal</option>
+                        <option value="firm">Firm (Deeper nod)</option>
+                    </select>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <span class="setting-title">Invert Tilt</span>
+                        <span class="setting-desc">Swap UP / DOWN gestures</span>
+                    </div>
+                    <select id="setting-invert-tilt" class="setting-select">
+                        <option value="false" selected>Standard (Down=Correct, Up=Skip)</option>
+                        <option value="true">Inverted (Up=Correct, Down=Skip)</option>
                     </select>
                 </div>
             </div>

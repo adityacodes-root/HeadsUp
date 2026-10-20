@@ -61,6 +61,7 @@ class HeadsUpGame {
             btnExitGame: document.getElementById('btn-exit-game'),
             btnFlipOrientation: document.getElementById('btn-flip-orientation'),
             feedbackOverlay: document.getElementById('feedback-overlay'),
+            orientationWarning: document.getElementById('orientation-warning'),
             
             summaryTitle: document.getElementById('summary-title'),
             summarySubtitle: document.getElementById('summary-subtitle'),
@@ -74,6 +75,8 @@ class HeadsUpGame {
             modalSettings: document.getElementById('modal-settings'),
             btnCloseSettings: document.getElementById('btn-close-settings'),
             selectTarget: document.getElementById('setting-target'),
+            selectSensitivity: document.getElementById('setting-sensitivity'),
+            selectInvertTilt: document.getElementById('setting-invert-tilt'),
             btnStartChallenge: document.getElementById('btn-start-challenge')
         };
     }
@@ -93,6 +96,16 @@ class HeadsUpGame {
             this.dom.selectTarget.addEventListener('change', (e) => {
                 this.config.targetCards = parseInt(e.target.value, 10);
                 try { localStorage.setItem('headsup_target', this.config.targetCards); } catch (err) {}
+            });
+        }
+        if (this.dom.selectSensitivity) {
+            this.dom.selectSensitivity.addEventListener('change', (e) => {
+                MotionEngine.setSensitivity(e.target.value);
+            });
+        }
+        if (this.dom.selectInvertTilt) {
+            this.dom.selectInvertTilt.addEventListener('change', (e) => {
+                MotionEngine.setInvertTilt(e.target.value === 'true');
             });
         }
 
@@ -171,12 +184,20 @@ class HeadsUpGame {
         MotionEngine.stop();
         this.releaseWakeLock();
         this.dom.screenPlaying.classList.remove('flip-180');
+        if (this.dom.orientationWarning) this.dom.orientationWarning.classList.remove('active');
         this.showScreen('LOBBY');
     }
 
     updateSettingsUi() {
         if (this.dom.selectTarget) {
             this.dom.selectTarget.value = this.config.targetCards.toString();
+        }
+        if (this.dom.selectSensitivity) {
+            const savedSens = localStorage.getItem('headsup_sensitivity') || 'normal';
+            this.dom.selectSensitivity.value = savedSens;
+        }
+        if (this.dom.selectInvertTilt) {
+            this.dom.selectInvertTilt.value = MotionEngine.invertTilt ? 'true' : 'false';
         }
     }
 
@@ -240,14 +261,18 @@ class HeadsUpGame {
 
         MotionEngine.onStateChange = (status) => {
             if (this.dom.tiltIndicator && this.gameState === 'PLAYING') {
-                if (status.state === 'DISABLED_VERTICAL') {
-                    this.dom.tiltIndicator.className = 'status-dot';
-                } else if (status.state === 'TILTED_DOWN') {
-                    this.dom.tiltIndicator.className = 'status-dot up';
-                } else if (status.state === 'TILTED_UP') {
-                    this.dom.tiltIndicator.className = 'status-dot down';
+                if (!status.isHorizontal) {
+                    this.dom.tiltIndicator.className = 'status-dot disabled';
+                    if (this.dom.orientationWarning) this.dom.orientationWarning.classList.add('active');
                 } else {
-                    this.dom.tiltIndicator.className = 'status-dot neutral';
+                    if (this.dom.orientationWarning) this.dom.orientationWarning.classList.remove('active');
+                    if (status.state === 'TILTED_DOWN') {
+                        this.dom.tiltIndicator.className = 'status-dot correct';
+                    } else if (status.state === 'TILTED_UP') {
+                        this.dom.tiltIndicator.className = 'status-dot skip';
+                    } else {
+                        this.dom.tiltIndicator.className = 'status-dot neutral';
+                    }
                 }
             }
         };
@@ -334,6 +359,9 @@ class HeadsUpGame {
 
         this.showScreen('READY');
 
+        // Pre-warm sensor calibration while user places phone on forehead
+        MotionEngine.start(false);
+
         this.readyCountdown = 3;
         this.dom.readyCount.innerText = this.readyCountdown;
         AudioEngine.playBeep(false);
@@ -360,7 +388,7 @@ class HeadsUpGame {
         this.showScreen('PLAYING');
         this.elapsedSeconds = 0;
 
-        MotionEngine.start();
+        MotionEngine.enableActions();
 
         this.updateTimerDisplay();
         this.updateScoreProgress();
@@ -459,6 +487,7 @@ class HeadsUpGame {
         MotionEngine.stop();
         this.releaseWakeLock();
         this.dom.screenPlaying.classList.remove('flip-180');
+        if (this.dom.orientationWarning) this.dom.orientationWarning.classList.remove('active');
 
         const minutes = Math.floor(this.elapsedSeconds / 60);
         const seconds = this.elapsedSeconds % 60;

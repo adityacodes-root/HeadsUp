@@ -1,6 +1,7 @@
 class MotionController {
     constructor() {
         this.active = false;
+        this.actionsEnabled = false;
         this.hasSensorData = false;
         this.permissionGranted = false;
 
@@ -12,27 +13,49 @@ class MotionController {
         this.isLocked = false;
         this.armed = true;
 
-        this.TILT_THRESHOLD = 2.4;
-        this.NEUTRAL_THRESHOLD = 1.0;
-        this.COOLDOWN_MS = 950;
+        this.TILT_THRESHOLD = 2.6;
+        this.NEUTRAL_THRESHOLD = 1.6;
+        this.COOLDOWN_MS = 600;
 
         this.baselineZ = 0;
-        this.calibrationSamples = 0;
-        this.calibrated = false;
-        this.neutralCount = 0;
-        this.requiredNeutralCount = 6;
+        this.neutralFrames = 0;
+        this.requiredNeutralFrames = 2;
 
-        this.lastTriggeredDirection = null;
-
-        this.currentZ = 0;
-        this.currentDelta = 0;
         this.isPhoneHorizontal = true;
+        this.invertTilt = false;
 
-        this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        try {
+            const savedInvert = localStorage.getItem('headsup_invert_tilt');
+            if (savedInvert !== null) this.invertTilt = savedInvert === 'true';
+            const savedSens = localStorage.getItem('headsup_sensitivity');
+            if (savedSens) this.setSensitivity(savedSens);
+        } catch (e) {}
 
         this.handleDeviceMotion = this.handleDeviceMotion.bind(this);
         this.handleDeviceOrientation = this.handleDeviceOrientation.bind(this);
+    }
+
+    setSensitivity(level) {
+        if (level === 'sensitive') {
+            this.TILT_THRESHOLD = 2.0;
+            this.NEUTRAL_THRESHOLD = 1.2;
+        } else if (level === 'firm') {
+            this.TILT_THRESHOLD = 3.2;
+            this.NEUTRAL_THRESHOLD = 2.0;
+        } else {
+            this.TILT_THRESHOLD = 2.6;
+            this.NEUTRAL_THRESHOLD = 1.6;
+        }
+        try {
+            localStorage.setItem('headsup_sensitivity', level);
+        } catch (e) {}
+    }
+
+    setInvertTilt(invert) {
+        this.invertTilt = !!invert;
+        try {
+            localStorage.setItem('headsup_invert_tilt', this.invertTilt);
+        } catch (e) {}
     }
 
     async requestPermission() {
@@ -58,25 +81,30 @@ class MotionController {
         return granted;
     }
 
-    start() {
+    start(enableActions = true) {
         this.active = true;
+        this.actionsEnabled = enableActions;
         this.state = 'NEUTRAL';
         this.armed = true;
         this.isLocked = false;
         this.baselineZ = 0;
-        this.calibrationSamples = 0;
-        this.calibrated = false;
-        this.neutralCount = 0;
-        this.lastTriggeredDirection = null;
-        this.hasSensorData = false;
+        this.neutralFrames = 0;
         this.isPhoneHorizontal = true;
+        this.hasSensorData = false;
 
         window.addEventListener('devicemotion', this.handleDeviceMotion, false);
         window.addEventListener('deviceorientation', this.handleDeviceOrientation, false);
     }
 
+    enableActions() {
+        this.actionsEnabled = true;
+        this.armed = true;
+        this.isLocked = false;
+    }
+
     stop() {
         this.active = false;
+        this.actionsEnabled = false;
         window.removeEventListener('devicemotion', this.handleDeviceMotion, false);
         window.removeEventListener('deviceorientation', this.handleDeviceOrientation, false);
     }
@@ -90,67 +118,80 @@ class MotionController {
 
         const ax = Math.abs(acc.x || 0);
         const ay = Math.abs(acc.y || 0);
+        const az = Math.abs(acc.z || 0);
 
-        // Only horizontal orientation allowed - vertical tilt is disabled
         const isLandscapeBrowser = window.innerWidth > window.innerHeight;
-        const isHorizontalPhysical = ax >= (ay - 1.5);
-        this.isPhoneHorizontal = isLandscapeBrowser || isHorizontalPhysical;
+        if (isLandscapeBrowser) {
+            this.isPhoneHorizontal = true;
+        } else if (az < 4.5) {
+            if (ax > ay + 1.0 && ay < 4.5) {
+                this.isPhoneHorizontal = true;
+            } else if (ay > ax + 1.0 || ay > 5.5) {
+                this.isPhoneHorizontal = false;
+            }
+        } else if (ay > 6.5) {
+            this.isPhoneHorizontal = false;
+        }
 
-        // Normalize Z: positive = UP (ceiling), negative = DOWN (floor)
-        const z = this.isIOS ? -acc.z : acc.z;
-        this.currentZ = z;
-        this.processReading(z);
+        let z = acc.z || 0;
+        if (this.invertTilt) z = -z;
+
+        this.processReading(z, this.isPhoneHorizontal);
     }
 
     handleDeviceOrientation(e) {
         if (!this.active || this.hasSensorData) return;
 
-        let tilt = 0;
         const orientation = window.orientation || (screen.orientation && screen.orientation.angle) || 0;
+        let tilt = 0;
 
         if (Math.abs(orientation) === 90 || orientation === 270) {
-            tilt = (orientation === 90) ? e.gamma : -e.gamma;
+            tilt = (orientation === 90) ? -e.gamma : e.gamma;
             this.isPhoneHorizontal = true;
         } else {
-            tilt = e.gamma;
+            tilt = e.gamma || 0;
             this.isPhoneHorizontal = true;
         }
 
         if (tilt === null || isNaN(tilt)) return;
 
-        const simulatedZ = Math.sin((tilt || 0) * (Math.PI / 180)) * 9.8;
-        this.currentZ = simulatedZ;
-        this.processReading(simulatedZ);
+        let simulatedZ = Math.sin((tilt || 0) * (Math.PI / 180)) * 9.8;
+        if (this.invertTilt) simulatedZ = -simulatedZ;
+
+        this.processReading(simulatedZ, this.isPhoneHorizontal);
     }
 
-    processReading(z) {
-        if (!this.isPhoneHorizontal) {
+    processReading(z, isHorizontal) {
+        if (!isHorizontal) {
             if (this.onStateChange) {
                 this.onStateChange({
                     z,
                     delta: 0,
                     state: 'DISABLED_VERTICAL',
                     isLocked: true,
-                    armed: false
+                    armed: false,
+                    isHorizontal: false
                 });
             }
             return;
         }
 
-        if (!this.calibrated) {
-            if (Math.abs(z) < 6.0) {
-                this.baselineZ = (this.baselineZ * this.calibrationSamples + z) / (this.calibrationSamples + 1);
-                this.calibrationSamples++;
-                if (this.calibrationSamples >= 5) {
-                    this.calibrated = true;
-                }
-            }
-        } else if (!this.isLocked && this.armed && Math.abs(z - this.baselineZ) < 1.2) {
+        if (Math.abs(z) <= 2.2 && !this.isLocked) {
             this.baselineZ = this.baselineZ * 0.95 + z * 0.05;
+            this.baselineZ = Math.max(-2.0, Math.min(2.0, this.baselineZ));
         }
 
         const delta = z - this.baselineZ;
-        this.currentDelta = delta;
+
+        if (Math.abs(delta) <= this.NEUTRAL_THRESHOLD) {
+            this.neutralFrames++;
+            if (this.neutralFrames >= this.requiredNeutralFrames && !this.isLocked) {
+                this.armed = true;
+                this.state = 'NEUTRAL';
+            }
+        } else {
+            this.neutralFrames = 0;
+        }
 
         if (this.onStateChange) {
             this.onStateChange({
@@ -158,33 +199,18 @@ class MotionController {
                 delta,
                 state: this.state,
                 isLocked: this.isLocked,
-                armed: this.armed
+                armed: this.armed,
+                isHorizontal: true
             });
         }
 
-        // Require multiple stable frames inside neutral zone before re-arming
-        if (Math.abs(delta) <= this.NEUTRAL_THRESHOLD) {
-            this.neutralCount++;
-            if (this.neutralCount >= this.requiredNeutralCount) {
-                if (!this.isLocked) {
-                    this.armed = true;
-                    this.state = 'NEUTRAL';
-                    this.lastTriggeredDirection = null;
-                }
-            }
-        } else {
-            this.neutralCount = 0;
-        }
+        if (!this.actionsEnabled || this.isLocked || !this.armed) return;
 
-        if (this.isLocked || !this.armed) return;
-
-        // Bend phone down towards floor -> CORRECT
         if (delta <= -this.TILT_THRESHOLD) {
             this.triggerAction('DOWN');
             return;
         }
 
-        // Bend phone up towards ceiling -> SKIP
         if (delta >= this.TILT_THRESHOLD) {
             this.triggerAction('UP');
             return;
@@ -194,8 +220,7 @@ class MotionController {
     triggerAction(direction) {
         this.isLocked = true;
         this.armed = false;
-        this.neutralCount = 0;
-        this.lastTriggeredDirection = direction;
+        this.neutralFrames = 0;
         this.state = direction === 'DOWN' ? 'TILTED_DOWN' : 'TILTED_UP';
 
         if (direction === 'DOWN' && typeof this.onTiltDown === 'function') {

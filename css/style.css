@@ -494,10 +494,33 @@ html, body {
     width: 8px;
     height: 8px;
     border-radius: var(--radius-full);
+    transition: background 0.15s ease, opacity 0.15s ease;
 }
-.status-dot.neutral { background: var(--color-aws-orange); }
-.status-dot.up { background: var(--color-correct); }
-.status-dot.down { background: var(--color-skip); }
+.status-dot.neutral { background: var(--color-aws-orange); opacity: 1; }
+.status-dot.correct { background: var(--color-correct); opacity: 1; }
+.status-dot.skip { background: var(--color-skip); opacity: 1; }
+.status-dot.disabled { background: #9CA3AF; opacity: 0.45; }
+
+.orientation-warning {
+    display: none;
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(17, 24, 39, 0.92);
+    color: #FFFFFF;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.35rem 0.85rem;
+    border-radius: var(--radius-full);
+    z-index: 30;
+    pointer-events: none;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+.orientation-warning.active {
+    display: block;
+}
 
 .hud-icon-btn {
     width: 30px;
