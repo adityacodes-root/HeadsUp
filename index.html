@@ -1,10 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="#FFFFFF">
@@ -14,18 +12,16 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
 
     <link rel="icon" type="image/jpeg" href="./AWSSBG-logo.jpg">
     <link rel="apple-touch-icon" href="./AWSSBG-logo.jpg">
 
     <link rel="stylesheet" href="./css/style.css">
 </head>
-
 <body>
     <div id="app-container">
-
+        
         <main id="screen-lobby" class="screen active">
             <header class="lobby-header">
                 <div class="brand-wrapper">
@@ -89,8 +85,7 @@
                     </div>
                 </div>
 
-                <p class="ready-prompt-sub">Place phone on forehead facing teammates.<br>Tap screen or tilt to begin.
-                </p>
+                <p class="ready-prompt-sub">Hold phone horizontally on forehead facing teammates.<br>Tap screen or tilt to begin.</p>
             </div>
         </section>
 
@@ -105,12 +100,11 @@
                 <div class="hud-right">
                     <div id="tilt-status-dot" class="status-dot neutral"></div>
                     <div id="timer-display" class="timer-pill">0:00</div>
-                    <button id="btn-exit-game" class="icon-btn close-btn" aria-label="Exit Game"
-                        title="Close Game">✕</button>
+                    <button id="btn-flip-orientation" class="hud-icon-btn" aria-label="Flip Screen" title="Flip 180°">🔄</button>
+                    <button id="btn-exit-game" class="hud-icon-btn" aria-label="Exit Game" title="Close Game">✕</button>
                 </div>
             </header>
 
-            <!-- Red Skip Button Above -->
             <div class="playing-top-bar">
                 <button id="btn-action-skip" class="touch-bar-btn skip">
                     <span>▲</span>
@@ -118,12 +112,10 @@
                 </button>
             </div>
 
-            <!-- Secret Word Center Stage -->
             <main class="word-stage">
                 <h1 id="current-word" class="word-content">Get Ready</h1>
             </main>
 
-            <!-- Green Correct Button Below -->
             <div class="playing-bottom-bar">
                 <button id="btn-action-correct" class="touch-bar-btn correct">
                     <span>▼</span>
@@ -198,5 +190,4 @@
     <script src="./js/motion.js"></script>
     <script src="./js/app.js"></script>
 </body>
-
 </html>

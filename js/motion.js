@@ -12,9 +12,9 @@ class MotionController {
         this.isLocked = false;
         this.armed = true;
 
-        this.TILT_THRESHOLD = 2.4;
-        this.NEUTRAL_THRESHOLD = 1.2;
-        this.COOLDOWN_MS = 750;
+        this.TILT_THRESHOLD = 2.2;
+        this.NEUTRAL_THRESHOLD = 1.1;
+        this.COOLDOWN_MS = 700;
 
         this.baselineZ = 0;
         this.calibrationSamples = 0;
@@ -22,6 +22,7 @@ class MotionController {
 
         this.currentZ = 0;
         this.currentDelta = 0;
+        this.isPhoneHorizontal = true;
 
         this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
                      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -62,6 +63,7 @@ class MotionController {
         this.calibrationSamples = 0;
         this.calibrated = false;
         this.hasSensorData = false;
+        this.isPhoneHorizontal = true;
 
         window.addEventListener('devicemotion', this.handleDeviceMotion, false);
         window.addEventListener('deviceorientation', this.handleDeviceOrientation, false);
@@ -80,7 +82,15 @@ class MotionController {
 
         this.hasSensorData = true;
 
-        // iOS and Android report opposite signs for Z axis
+        const ax = Math.abs(acc.x || 0);
+        const ay = Math.abs(acc.y || 0);
+
+        // Only horizontal orientation allowed - vertical tilt is disabled
+        const isLandscapeBrowser = window.innerWidth > window.innerHeight;
+        const isHorizontalPhysical = ax >= (ay - 1.5);
+        this.isPhoneHorizontal = isLandscapeBrowser || isHorizontalPhysical;
+
+        // Normalize Z: positive = UP (ceiling), negative = DOWN (floor)
         const z = this.isIOS ? -acc.z : acc.z;
         this.currentZ = z;
         this.processReading(z);
@@ -94,8 +104,11 @@ class MotionController {
 
         if (Math.abs(orientation) === 90 || orientation === 270) {
             tilt = (orientation === 90) ? e.gamma : -e.gamma;
+            this.isPhoneHorizontal = true;
         } else {
-            tilt = e.beta;
+            // When browser in portrait, rotating around horizontal phone axis is gamma
+            tilt = e.gamma;
+            this.isPhoneHorizontal = true;
         }
 
         if (tilt === null || isNaN(tilt)) return;
@@ -106,16 +119,31 @@ class MotionController {
     }
 
     processReading(z) {
+        // If phone is held vertically, disable tilt actions
+        if (!this.isPhoneHorizontal) {
+            if (this.onStateChange) {
+                this.onStateChange({
+                    z,
+                    delta: 0,
+                    state: 'DISABLED_VERTICAL',
+                    isLocked: true,
+                    armed: false
+                });
+            }
+            return;
+        }
+
+        // Calibrate baseline to player's forehead resting angle
         if (!this.calibrated) {
             if (Math.abs(z) < 6.0) {
                 this.baselineZ = (this.baselineZ * this.calibrationSamples + z) / (this.calibrationSamples + 1);
                 this.calibrationSamples++;
-                if (this.calibrationSamples >= 6) {
+                if (this.calibrationSamples >= 5) {
                     this.calibrated = true;
                 }
             }
-        } else if (!this.isLocked && this.armed && Math.abs(z - this.baselineZ) < 1.4) {
-            this.baselineZ = this.baselineZ * 0.96 + z * 0.04;
+        } else if (!this.isLocked && this.armed && Math.abs(z - this.baselineZ) < 1.3) {
+            this.baselineZ = this.baselineZ * 0.95 + z * 0.05;
         }
 
         const delta = z - this.baselineZ;
@@ -140,13 +168,13 @@ class MotionController {
 
         if (this.isLocked || !this.armed) return;
 
-        // Bend phone down towards floor (delta becomes negative) -> CORRECT
+        // Bend phone down towards floor -> CORRECT
         if (delta <= -this.TILT_THRESHOLD) {
             this.triggerAction('DOWN');
             return;
         }
 
-        // Bend phone up towards ceiling (delta becomes positive) -> SKIP
+        // Bend phone up towards ceiling -> SKIP
         if (delta >= this.TILT_THRESHOLD) {
             this.triggerAction('UP');
             return;

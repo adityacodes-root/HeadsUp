@@ -59,6 +59,7 @@ class HeadsUpGame {
             btnCorrect: document.getElementById('btn-action-correct'),
             btnSkip: document.getElementById('btn-action-skip'),
             btnExitGame: document.getElementById('btn-exit-game'),
+            btnFlipOrientation: document.getElementById('btn-flip-orientation'),
             feedbackOverlay: document.getElementById('feedback-overlay'),
             
             summaryTitle: document.getElementById('summary-title'),
@@ -128,6 +129,13 @@ class HeadsUpGame {
             this.dom.btnExitGame.addEventListener('click', handleExit);
             this.dom.btnExitGame.addEventListener('touchend', handleExit);
         }
+        if (this.dom.btnFlipOrientation) {
+            this.dom.btnFlipOrientation.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.dom.screenPlaying.classList.toggle('flip-180');
+            });
+        }
 
         if (this.dom.btnStartChallenge) {
             this.dom.btnStartChallenge.addEventListener('click', () => {
@@ -162,6 +170,7 @@ class HeadsUpGame {
         clearInterval(this.readyInterval);
         MotionEngine.stop();
         this.releaseWakeLock();
+        this.dom.screenPlaying.classList.remove('flip-180');
         this.showScreen('LOBBY');
     }
 
@@ -229,7 +238,9 @@ class HeadsUpGame {
 
         MotionEngine.onStateChange = (status) => {
             if (this.dom.tiltIndicator && this.gameState === 'PLAYING') {
-                if (status.state === 'TILTED_DOWN') {
+                if (status.state === 'DISABLED_VERTICAL') {
+                    this.dom.tiltIndicator.className = 'status-dot';
+                } else if (status.state === 'TILTED_DOWN') {
                     this.dom.tiltIndicator.className = 'status-dot up';
                 } else if (status.state === 'TILTED_UP') {
                     this.dom.tiltIndicator.className = 'status-dot down';
@@ -445,6 +456,7 @@ class HeadsUpGame {
         clearInterval(this.timerInterval);
         MotionEngine.stop();
         this.releaseWakeLock();
+        this.dom.screenPlaying.classList.remove('flip-180');
 
         const minutes = Math.floor(this.elapsedSeconds / 60);
         const seconds = this.elapsedSeconds % 60;
