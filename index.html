@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#FFFFFF">
+    <meta name="description" content="Heads Up! - 5 Players, 15 Cards.">
+
+    <title>Heads Up!</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <link rel="icon" type="image/jpeg" href="./AWSSBG-logo.jpg">
+    <link rel="apple-touch-icon" href="./AWSSBG-logo.jpg">
+
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+    <div id="app-container">
+
+        <main id="screen-lobby" class="screen active">
+            <header class="lobby-header">
+                <div class="brand-wrapper">
+                    <img src="./AWSSBG-logo.jpg" alt="Logo" class="brand-logo">
+                    <h1 class="brand-title">Heads Up!</h1>
+                </div>
+                <div class="header-actions">
+                    <button id="btn-mute-toggle" class="icon-btn" aria-label="Toggle Sound">🔊</button>
+                    <button id="btn-settings-toggle" class="icon-btn" aria-label="Settings">⚙️</button>
+                </div>
+            </header>
+
+            <section class="event-banner">
+                <div class="event-banner-header">
+                    <span class="event-tag">AWS Student Builder Group</span>
+                </div>
+                <h2 class="event-banner-title">5 Players • 15 Cards</h2>
+                <p class="event-banner-sub">Complete 15 cards in the fastest time</p>
+            </section>
+
+            <div class="deck-section-title">CHOOSE A DECK</div>
+
+            <div id="deck-grid" class="deck-grid"></div>
+
+            <div class="sticky-bottom-bar">
+                <div class="sticky-deck-preview">
+                    <span class="preview-label">Selected</span>
+                    <span id="selected-deck-name" class="preview-name">Random Places</span>
+                </div>
+                <button id="btn-start-challenge" class="btn-primary">
+                    Start
+                </button>
+            </div>
+        </main>
+
+        <section id="screen-ready" class="screen">
+            <div class="ready-container">
+                <div class="ready-countdown-circle">
+                    <span id="ready-count" class="ready-count">3</span>
+                </div>
+
+                <div class="ready-meta">
+                    <h2 id="ready-deck-name" class="ready-deck-name">Random Places</h2>
+                    <p id="ready-rules" class="ready-rules-pill">Complete 15 cards as fast as possible</p>
+                </div>
+
+                <div class="motion-guide-minimal">
+                    <div class="guide-item">
+                        <span class="guide-badge up">▲</span>
+                        <div class="guide-desc">
+                            <strong>Tilt UP</strong>
+                            <span>Pass / Skip</span>
+                        </div>
+                    </div>
+                    <div class="guide-item">
+                        <span class="guide-badge down">▼</span>
+                        <div class="guide-desc">
+                            <strong>Tilt DOWN</strong>
+                            <span>Correct</span>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="ready-prompt-sub">Place phone on forehead facing teammates.<br>Tap screen or tilt to begin.
+                </p>
+            </div>
+        </section>
+
+        <section id="screen-playing" class="screen">
+            <div id="feedback-overlay" class="feedback-overlay"></div>
+
+            <header class="playing-hud">
+                <div class="hud-left">
+                    <span id="playing-category" class="playing-category-badge">PLACES</span>
+                    <span id="score-progress" class="playing-score-progress">0 / 15</span>
+                </div>
+                <div class="hud-right">
+                    <div id="tilt-status-dot" class="status-dot neutral"></div>
+                    <div id="timer-display" class="timer-pill">0:00</div>
+                    <button id="btn-exit-game" class="icon-btn close-btn" aria-label="Exit Game"
+                        title="Close Game">✕</button>
+                </div>
+            </header>
+
+            <!-- Red Skip Button Above -->
+            <div class="playing-top-bar">
+                <button id="btn-action-skip" class="touch-bar-btn skip">
+                    <span>▲</span>
+                    <span>SKIP (TILT UP)</span>
+                </button>
+            </div>
+
+            <!-- Secret Word Center Stage -->
+            <main class="word-stage">
+                <h1 id="current-word" class="word-content">Get Ready</h1>
+            </main>
+
+            <!-- Green Correct Button Below -->
+            <div class="playing-bottom-bar">
+                <button id="btn-action-correct" class="touch-bar-btn correct">
+                    <span>▼</span>
+                    <span>CORRECT (TILT DOWN)</span>
+                </button>
+            </div>
+        </section>
+
+        <section id="screen-summary" class="screen">
+            <div class="summary-container">
+                <div class="summary-header">
+                    <h2 id="summary-title" class="summary-title">Completed!</h2>
+                    <p id="summary-subtitle" class="summary-subtitle">15 cards solved in 1m 24s</p>
+                </div>
+
+                <div class="summary-stats-grid">
+                    <div class="stat-box">
+                        <div id="summary-score" class="stat-val">15 / 15</div>
+                        <div class="stat-lbl">Solved</div>
+                    </div>
+                    <div class="stat-box">
+                        <div id="summary-time" class="stat-val">1m 24s</div>
+                        <div class="stat-lbl">Time</div>
+                    </div>
+                    <div class="stat-box">
+                        <div id="summary-skips" class="stat-val">2</div>
+                        <div class="stat-lbl">Skipped</div>
+                    </div>
+                </div>
+
+                <div class="summary-history-box">
+                    <span class="history-box-title">Card Breakdown</span>
+                    <div id="summary-history-list"></div>
+                </div>
+
+                <div class="summary-actions-row">
+                    <button id="btn-play-again" class="btn-primary" style="justify-content: center;">
+                        Play Again
+                    </button>
+                    <button id="btn-choose-deck" class="btn-secondary">
+                        Change Deck
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <div id="modal-settings" class="modal-backdrop">
+            <div class="modal-dialog">
+                <div class="modal-header">
+                    <h3 class="modal-title">Settings</h3>
+                    <button id="btn-close-settings" class="icon-btn" aria-label="Close">✕</button>
+                </div>
+
+                <div class="setting-row">
+                    <div class="setting-label">
+                        <span class="setting-title">Target Cards</span>
+                        <span class="setting-desc">Cards needed to finish round</span>
+                    </div>
+                    <select id="setting-target" class="setting-select">
+                        <option value="10">10 Cards</option>
+                        <option value="15" selected>15 Cards (Standard)</option>
+                        <option value="20">20 Cards</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="./js/decks.js"></script>
+    <script src="./js/audio.js"></script>
+    <script src="./js/motion.js"></script>
+    <script src="./js/app.js"></script>
+</body>
+
+</html>
